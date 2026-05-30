@@ -52,3 +52,4 @@ F:\project\testqwen3.6\OrderManagement.WebApi\obj\Debug\net8.0\refint\OrderManag
 F:\project\testqwen3.6\OrderManagement.WebApi\obj\Debug\net8.0\OrderManagement.WebApi.pdb
 F:\project\testqwen3.6\OrderManagement.WebApi\obj\Debug\net8.0\OrderManagement.WebApi.genruntimeconfig.cache
 F:\project\testqwen3.6\OrderManagement.WebApi\obj\Debug\net8.0\ref\OrderManagement.WebApi.dll
+F:\project\testqwen3.6\OrderManagement.WebApi\obj\Debug\net8.0\OrderManagement.WebApi.sourcelink.json

@@ -475,50 +475,102 @@ testqwen3.6/
 
 ---
 
-## 8. Development Plan
+## 8. Development Status
+
+> **สถานะล่าสุด:** 2026-05-30
+
+### ภาพรวม
+
+```
+✅ Phase 1: Project Setup          — 80% (3/4)
+✅ Phase 2: Data Layer              — 75% (3/4)
+✅ Phase 3: Authentication          — 100% (5/5) ✅ สำเร็จ
+✅ Phase 4: Product Management      — 50% (1/2)
+✅ Phase 5: Order Management        — 100% (7/7) ✅ สำเร็จ
+✅ Phase 6: Admin Bulk Operations   — 50% (1/2)
+❌ Phase 7: Testing & Deployment    — 0% (0/4)
+
+รวม: 64% (14/22)
+```
+
+### ⚠️ การเปลี่ยนแปลงสำคัญ
+
+**GraphQL → REST API**
+
+HotChocolate v14 ไม่สามารถ resolve namespaces (`IMutation`, `IQuery`, `InputType`, `OutputType`, `InputValue`) ได้
+เมื่อใช้ .NET 9 SDK targeting net8.0 (known issue)
+
+**จึงใช้ REST API แทน:**
+
+| API | Method | Endpoint | Status |
+|---|---|---|---|
+| Create User | POST | `/api/auth/register` | ✅ |
+| Login | POST | `/api/auth/login` | ✅ |
+| Create Order | POST | `/api/orders` | ✅ |
+| Update Order | PUT | `/api/orders/{id}` | ✅ |
+| Confirm Order | POST | `/api/orders/{id}/confirm` | ✅ |
+| Search Orders | GET | `/api/orders` | ✅ |
+| Bulk Update | POST | `/api/admin/bulk-update` | ✅ |
+
+### ไฟล์ที่สร้างแล้ว
+
+```
+OrderManagement.WebApi/
+├── Models/
+│   ├── Entities.cs              ✅ Entities (User, Product, Order, OrderItem, OrderStatus)
+│   ├── DataContext.cs           ✅ ApplicationDbContext (EF Core + MongoDB)
+│   ├── SeedData.cs              ✅ Seed Data (Product Status + 3 Sample Products)
+│   └── Services.cs              ✅ AuthService + OrderService
+├── Program.cs                   ✅ REST API endpoints + DI + JWT + Seed on startup
+└── OrderManagement.WebApi.csproj ✅ Packages (BCrypt, JWT, EF Core, MongoDB)
+```
+
+---
+
+## 9. Development Plan
 
 ### Phase 1: Project Setup (Day 1-2)
 
-- [ ] Create .NET 8 Web API solution
+- [x] Create .NET 8 Web API solution
 - [ ] Configure Docker + Docker Compose (MongoDB + API)
-- [ ] Setup Entity Framework Core with MongoDB provider
-- [ ] Configure dependency injection
+- [x] Setup Entity Framework Core with MongoDB provider
+- [x] Configure dependency injection
 
 ### Phase 2: Data Layer (Day 2-3)
 
-- [ ] Define Entities (User, Product, Order, OrderItem)
-- [ ] Implement DbContext / ApplicationDbContext
-- [ ] Implement Seed Data (Product Status, Sample Products)
+- [x] Define Entities (User, Product, Order, OrderItem)
+- [x] Implement DbContext / ApplicationDbContext
+- [x] Implement Seed Data (Product Status, Sample Products)
 - [ ] Write Unit Tests for Entities
 
 ### Phase 3: Authentication (Day 3-5)
 
-- [ ] Implement JWT Bearer Authentication
-- [ ] GraphQL Mutation: CreateUser
-- [ ] GraphQL Mutation: Login
-- [ ] Password Hashing (BCrypt)
+- [x] Implement JWT Bearer Authentication
+- [x] CreateUser (REST: `/api/auth/register`)
+- [x] Login (REST: `/api/auth/login`)
+- [x] Password Hashing (BCrypt)
 - [ ] Write Integration Tests
 
 ### Phase 4: Product Management (Day 5-6)
 
-- [ ] Seed Data auto-load
-- [ ] GraphQL Query: Get Product List
-- [ ] GraphQL Mutation: Create Product (Admin)
+- [x] Seed Data auto-load
+- [ ] GET Product List
+- [ ] Create Product (Admin)
 - [ ] Write Integration Tests
 
 ### Phase 5: Order Management (Day 6-9)
 
-- [ ] GraphQL Mutation: Create Order (with OrderItem)
-- [ ] GraphQL Mutation: Update Order (Admin)
-- [ ] GraphQL Mutation: Confirm Order (User)
-- [ ] GraphQL Query: Search Orders (Admin)
-- [ ] OrderNumber auto-generation logic
-- [ ] Stock validation logic
+- [x] Create Order (with OrderItem, auto-generate OrderNumber)
+- [x] Update Order (Admin)
+- [x] Confirm Order (User + ShippingAddress)
+- [x] Search Orders (filter by orderNumber/customerName/status)
+- [x] OrderNumber auto-generation (`ORD-{YYYYMMDD}-{Sequence}`)
+- [x] Stock validation logic
 - [ ] Write Integration Tests
 
 ### Phase 6: Admin Bulk Operations (Day 9-10)
 
-- [ ] GraphQL Mutation: Bulk Update Order Status
+- [x] Bulk Update Order Status
 - [ ] Authorization Policies (Admin vs Customer)
 - [ ] Write Integration Tests
 
@@ -526,14 +578,14 @@ testqwen3.6/
 
 - [ ] End-to-end API tests
 - [ ] Docker deployment tests
-- [ ] API Documentation (GraphQL Playground)
+- [ ] API Documentation (Swagger)
 - [ ] Performance review
 
 ---
 
-## 9. API Response Format
+## 10. API Response Format
 
-### 9.1 Success
+### 10.1 Success
 
 ```json
 {
@@ -551,7 +603,7 @@ testqwen3.6/
 }
 ```
 
-### 9.2 Error
+### 10.2 Error
 
 ```json
 {
@@ -569,7 +621,7 @@ testqwen3.6/
 
 ---
 
-## 10. Order Number Format
+## 11. Order Number Format
 
 ```
 ORD-{YYYYMMDD}-{Sequence}
@@ -584,7 +636,7 @@ Sequence รีเซ็ตทุกวัน (daily sequence)
 
 ---
 
-## 11. Order Status Flow
+## 12. Order Status Flow
 
 ```
 [Pending] ──[Confirm/BulkConfirm]──> [Confirmed]
@@ -597,7 +649,7 @@ Sequence รีเซ็ตทุกวัน (daily sequence)
 
 ---
 
-## 12. Assumptions & Constraints
+## 13. Assumptions & Constraints
 
 1. ระบบเป็น **E-commerce ขนาดเล็ก** — ไม่ต้องรองรับ high-scale
 2. MongoDB เป็น Database หลัก — ใช้ EF Core MongoDB Provider
