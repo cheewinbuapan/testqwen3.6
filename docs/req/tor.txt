@@ -1,0 +1,33 @@
+คุณคือ SA และ UX/UI designer ของ บริษัท software
+
+จงเขียน เอกสาร PRD เพื่อพัฒนา ระบบ webapi ด้วย .NET 8 + HotChocolate GraphQL ไม่มี WEB UI
+
+โดยให้ สร้างfile spec.md เก็บไว้ใน /doc
+
+ส่วนของ UI ให้ ตามตัวอบ่างในภาพ
+
+
+
+
+
+spec ดังต่อไปนี้
+
+
+
+
+
+Business Requirement บริษัท ต้องการพัฒนาระบบ Backend สำหรับจัดการคลังสินค้าและคำสั่งซื้อ (Order Management System) สำหรับร้านค้า E-commerce ขนาดเล็กที่ต้องการความรวดเร็วและประสิทธิภาพสูง จงพัฒนา Web app เพื่อรองรับฟังก์ชันการทำงานหลักของระบบนี้"
+
+1 มี Function Seed Data Product Item และ Seed Data Product Status Reference แบบ Auto ในกรณีที่ Data collection
+
+2 มีFunction ลงทะเบียน Create User Account (10 คะแนน) 2.1 Function Create User Account มี Data ที่ต้องกรอกคือ -Email(คือ User account ไม่สามารถซ้ำได้ แต่ไม่ใช่ Primary Key) - ชื่อ - นาม สกุล - เบอร์โทร - Password - ConfirmPassword 3 มีFunction User Login (10 คะแนน) 3.1 User สามารถ login ด้วย User(Email) และ Password
+
+4 มี Function จัดการสินค้า ของ Admin 4.1 สามารถค้นหา เลขคำสั่งซื้อสินค้า OrderNumber,ชื่อ นาม สกุล ผู้สั่ง 4.2 Data Return Order Product List พร้อมสถาณะคำสั่งซื้อ { รอยืนยันคำสั่งซื้อ , ยืนยันคำสั่งซื้อ } แต่ละ Order มี data Order Detail
+
+5 มี Function เพิ่มคำสั่งซื้อสินค้า 4.1 Data ที่ต้อง Add Order Detail โดย 1 คำสั่งซื้อสามารถ เลือกสินได้หลายอย่าง แต่ละอย่างมีจำนวนแตกต่างกัน และ return OrderNumber โดย Order Detail ประกอบด้วย - Product Number - จำนวน item
+
+6 มี Function แก้ไข คำสั่งซื้อสินค้า 6.1 Data ที่ต้อง แก้ไขได้ ตาม คำสั่งซื้อ OrderNumber -Product Number - จำนวน
+
+7 มี Function User ยืนยัน สั่งซื้อสินค้า 7.1 Data ที่ต้อง Put ซึ่งต้องตามคำสั่งซื้อOrderNumber -ที่อยู่จัดส่ง
+
+8 มี Function Admin update สถาณะคำสั่งซื้อ ( 8.1 Admin สามารถ select เลือกยืนยัน user Order ได้หลายOrderพร้อมกัน เพื่อเปลี่ยน สถาณะ เป็น ยืนยันคำสั่งซื้อ
