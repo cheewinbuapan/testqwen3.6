@@ -97,3 +97,4 @@ F:\project\testqwen3.6\OrderManagement.Tests\obj\Debug\net8.0\refint\OrderManage
 F:\project\testqwen3.6\OrderManagement.Tests\obj\Debug\net8.0\OrderManagement.Tests.pdb
 F:\project\testqwen3.6\OrderManagement.Tests\obj\Debug\net8.0\OrderManagement.Tests.genruntimeconfig.cache
 F:\project\testqwen3.6\OrderManagement.Tests\obj\Debug\net8.0\ref\OrderManagement.Tests.dll
+F:\project\testqwen3.6\OrderManagement.Tests\obj\Debug\net8.0\OrderManagement.Tests.sourcelink.json

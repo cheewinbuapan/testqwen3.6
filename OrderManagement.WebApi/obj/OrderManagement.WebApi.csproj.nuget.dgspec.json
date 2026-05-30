@@ -56,6 +56,22 @@
               "target": "Package",
               "version": "[4.0.3, )"
             },
+            "HotChocolate.AspNetCore": {
+              "target": "Package",
+              "version": "[15.1.12, )"
+            },
+            "HotChocolate.Authorization": {
+              "target": "Package",
+              "version": "[15.1.12, )"
+            },
+            "HotChocolate.Data": {
+              "target": "Package",
+              "version": "[15.1.12, )"
+            },
+            "HotChocolate.Types.OffsetPagination": {
+              "target": "Package",
+              "version": "[15.1.12, )"
+            },
             "Microsoft.AspNetCore.Authentication.JwtBearer": {
               "target": "Package",
               "version": "[8.0.0, )"
