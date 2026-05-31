@@ -9,7 +9,7 @@ namespace OrderManagement.WebApi.GraphTypes.Queries;
 /// <summary>
 /// GraphQL Query root type.
 /// Provides searchOrders for order search with filters and pagination.
-/// Provides getProduct for product listing.
+/// Provides getProducts for product listing.
 /// </summary>
 public class QueryType
 {
@@ -44,10 +44,18 @@ public class QueryType
     /// </summary>
     [GraphQLName("getProducts")]
     [UsePaging(MaxPageSize = 100, IncludeTotalCount = true)]
-    public IQueryable<Product> GetProducts(
+    public IQueryable<ProductOutput> GetProducts(
         [Service] ProductService productService)
     {
-        return productService.GetProductsQuery();
+        return productService.GetProductsQuery()
+            .Select(product => new ProductOutput
+            {
+                Id = product.Id,
+                ProductNumber = product.ProductNumber,
+                Name = product.Name,
+                Price = product.Price,
+                Stock = product.Stock
+            });
     }
 
 }
