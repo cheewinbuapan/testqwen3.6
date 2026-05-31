@@ -9,8 +9,8 @@ namespace OrderManagement.WebApi.GraphTypes.Queries;
 /// <summary>
 /// GraphQL Query root type.
 /// Provides searchOrders for order search with filters and pagination.
+/// Provides getProduct for product listing.
 /// </summary>
-[QueryType]
 public class QueryType
 {
     /// <summary>
@@ -38,4 +38,16 @@ public class QueryType
                 CreatedAt = order.CreatedAt
             });
     }
+
+    /// <summary>
+    /// Retrieve the full product list for customers who are not logged in.
+    /// </summary>
+    [GraphQLName("getProducts")]
+    [UsePaging(MaxPageSize = 100, IncludeTotalCount = true)]
+    public IQueryable<Product> GetProducts(
+        [Service] ProductService productService)
+    {
+        return productService.GetProductsQuery();
+    }
+
 }

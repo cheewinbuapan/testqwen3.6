@@ -29,8 +29,10 @@ builder.Services.AddAuthentication("Bearer")
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<OrderService>();
+builder.Services.AddScoped<ProductService>();
 
 builder.Services.AddGraphQLServer()
     .ConfigureSchema(schema => schema.AddAuthorizeDirectiveType())

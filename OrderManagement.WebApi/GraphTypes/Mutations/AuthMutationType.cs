@@ -13,7 +13,6 @@ namespace OrderManagement.WebApi.GraphTypes.Mutations;
 /// Provides order mutations: createOrder, updateOrder, confirmOrder.
 /// Provides admin mutation: bulkUpdateOrderStatus.
 /// </summary>
-[MutationType]
 public class MutationType
 {
     /// <summary>
