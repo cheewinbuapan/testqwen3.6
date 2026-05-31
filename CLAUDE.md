@@ -734,3 +734,4 @@ dotnet test tests/<TestProject>/<TestProject>.csproj
 - All data access uses EF Core with the MongoDB provider.
 - Integration tests in the xUnit project test GraphQL queries and mutations via HTTP requests.
 - Local environment is managed with Docker Compose (MongoDB + API).
+- one C# class    per one file .cs
