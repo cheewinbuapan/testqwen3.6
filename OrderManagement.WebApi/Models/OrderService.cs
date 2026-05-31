@@ -98,24 +98,32 @@ public class OrderService
 
     public async Task<object> SearchOrdersAsync(string? orderNumber = null, string? customerName = null, string? status = null, int page = 1, int pageSize = 20)
     {
-        var query = _context.Orders.AsQueryable();
-        if (!string.IsNullOrEmpty(orderNumber))
-            query = query.Where(o => o.OrderNumber.Contains(orderNumber));
-        if (!string.IsNullOrEmpty(customerName))
-            query = query.Where(o => o.CustomerName.Contains(customerName));
-        if (status == "PENDING")
-            query = query.Where(o => o.Status == OrderStatus.Pending);
-        if (status == "CONFIRMED")
-            query = query.Where(o => o.Status == OrderStatus.Confirmed);
+        var statusFilter = ParseOrderStatus(status);
+        var query = GetOrdersQuery(orderNumber, customerName, statusFilter);
 
         var total = await query.CountAsync();
         var orders = await query
-            .OrderByDescending(o => o.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(o => new { o.Id, o.OrderNumber, o.CustomerName, o.Status, o.TotalAmount, ItemCount = o.Items.Count, o.CreatedAt })
             .ToListAsync();
         return new { TotalCount = total, Orders = orders };
+    }
+
+    public IQueryable<Order> GetOrdersQuery(string? orderNumber = null, string? customerName = null, OrderStatus? status = null)
+    {
+        var query = _context.Orders.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(orderNumber))
+            query = query.Where(o => o.OrderNumber.Contains(orderNumber));
+
+        if (!string.IsNullOrWhiteSpace(customerName))
+            query = query.Where(o => o.CustomerName.Contains(customerName));
+
+        if (status.HasValue)
+            query = query.Where(o => o.Status == status.Value);
+
+        return query.OrderByDescending(o => o.CreatedAt);
     }
 
     public async Task<object> BulkUpdateOrderStatusAsync(List<string> ids, string status)
@@ -152,5 +160,15 @@ public class OrderService
         var dateStr = DateTime.UtcNow.ToString("yyyyMMdd");
         var count = _context.Orders.CountAsync(o => o.OrderNumber.StartsWith($"ORD-{dateStr}")).Result;
         return $"ORD-{dateStr}-{count + 1:D4}";
+    }
+
+    private static OrderStatus? ParseOrderStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+            return null;
+
+        return Enum.TryParse<OrderStatus>(status, true, out var parsedStatus)
+            ? parsedStatus
+            : null;
     }
 }

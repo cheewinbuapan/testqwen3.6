@@ -1,5 +1,6 @@
-using HotChocolate.Types;
-using OrderManagement.WebApi.GraphTypes.Inputs;
+using HotChocolate;
+using HotChocolate.Authorization;
+using HotChocolate.Data;
 using OrderManagement.WebApi.GraphTypes.Outputs;
 using OrderManagement.WebApi.Models;
 
@@ -9,34 +10,32 @@ namespace OrderManagement.WebApi.GraphTypes.Queries;
 /// GraphQL Query root type.
 /// Provides searchOrders for order search with filters and pagination.
 /// </summary>
-public class QueryType : ObjectType
+[QueryType]
+public class QueryType
 {
-    protected override void Configure(IObjectTypeDescriptor descriptor)
+    /// <summary>
+    /// Search orders with filters, sorting, and cursor pagination.
+    /// </summary>
+    [Authorize(Roles = new[] { "Admin" })]
+    [GraphQLName("searchOrders")]
+    [UsePaging(MaxPageSize = 100, IncludeTotalCount = true)]
+    [UseFiltering]
+    [UseSorting]
+    public IQueryable<OrderSummary> GetSearchOrders(
+        [Service] OrderService orderService,
+        string? orderNumber = null,
+        string? customerName = null,
+        OrderStatus? status = null)
     {
-        descriptor.Field("searchOrders")
-            .Description("Search orders with filters and pagination.")
-            .Authorize("Admin")
-            .Type<OrderSummaryType>()
-            .Argument("orderNumber", a => a.Type(typeof(string)))
-            .Argument("customerName", a => a.Type(typeof(string)))
-            .Argument("status", a => a.Type(typeof(OrderStatus)))
-            .Argument("page", a => a.Type(typeof(int)).DefaultValue(1))
-            .Argument("pageSize", a => a.Type(typeof(int)).DefaultValue(20))
-            .Resolve(async context =>
+        return orderService.GetOrdersQuery(orderNumber, customerName, status)
+            .Select(order => new OrderSummary
             {
-                var orderService = context.Service<OrderService>();
-                var orderNumber = context.ArgumentValue<string?>("orderNumber");
-                var customerName = context.ArgumentValue<string?>("customerName");
-                var status = context.ArgumentValue<OrderStatus?>("status");
-                var page = context.ArgumentValue<int>("page");
-                var pageSize = context.ArgumentValue<int>("pageSize");
-
-                return await orderService.SearchOrdersAsync(
-                    orderNumber,
-                    customerName,
-                    status?.ToString(),
-                    page,
-                    pageSize);
+                OrderNumber = order.OrderNumber,
+                CustomerName = order.CustomerName,
+                Status = order.Status,
+                TotalAmount = order.TotalAmount,
+                ItemCount = order.Items.Count,
+                CreatedAt = order.CreatedAt
             });
     }
 }

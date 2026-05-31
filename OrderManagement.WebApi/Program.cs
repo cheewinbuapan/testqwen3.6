@@ -34,8 +34,10 @@ builder.Services.AddScoped<OrderService>();
 
 builder.Services.AddGraphQLServer()
     .ConfigureSchema(schema => schema.AddAuthorizeDirectiveType())
-    .AddType<QueryType>()
-    .AddType<MutationType>()
+    .AddQueryType<QueryType>()
+    .AddFiltering()
+    .AddSorting()
+    .AddMutationType<MutationType>()
     .AddType<UserType>()
     .AddType<OrderType>()
     .AddType<OrderSummaryType>()

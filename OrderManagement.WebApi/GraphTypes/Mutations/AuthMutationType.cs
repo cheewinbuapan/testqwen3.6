@@ -1,4 +1,6 @@
-using HotChocolate.Types;
+using System.Security.Claims;
+using HotChocolate;
+using HotChocolate.Authorization;
 using OrderManagement.WebApi.GraphTypes.Inputs;
 using OrderManagement.WebApi.GraphTypes.Outputs;
 using OrderManagement.WebApi.Models;
@@ -11,152 +13,142 @@ namespace OrderManagement.WebApi.GraphTypes.Mutations;
 /// Provides order mutations: createOrder, updateOrder, confirmOrder.
 /// Provides admin mutation: bulkUpdateOrderStatus.
 /// </summary>
-public class MutationType : ObjectType
+[MutationType]
+public class MutationType
 {
-    protected override void Configure(IObjectTypeDescriptor descriptor)
+    /// <summary>
+    /// Create a new user account.
+    /// </summary>
+    [Authorize(Roles = new[] { "Customer", "Admin" })]
+    [GraphQLName("createUser")]
+    public async Task<User> CreateUser(
+        [Service] AuthService authService,
+        CreateUserInput input)
     {
-        // Auth mutations
-        descriptor.Field("createUser")
-            .Description("Create a new user account.")
-            .Authorize("Customer", "Admin")
-            .Argument("input", a => a.Type(typeof(CreateUserInput)))
-            .Type<UserType>()
-            .Resolve(async context =>
-            {
-                var input = context.ArgumentValue<CreateUserInput>("input");
-                var authService = context.Service<AuthService>();
+        if (input.Password != input.ConfirmPassword)
+            throw new InvalidOperationException("Passwords do not match");
 
-                if (input.Password != input.ConfirmPassword)
-                    throw new InvalidOperationException("Passwords do not match");
+        return await authService.CreateUserAsync(
+            input.Email,
+            input.FirstName,
+            input.LastName,
+            input.Phone,
+            input.Password,
+            input.ConfirmPassword);
+    }
 
-                return await authService.CreateUserAsync(
-                    input.Email,
-                    input.FirstName,
-                    input.LastName,
-                    input.Phone,
-                    input.Password,
-                    input.ConfirmPassword);
-            });
+    /// <summary>
+    /// Login with email and password, returns JWT token.
+    /// </summary>
+    [GraphQLName("login")]
+    public async Task<AuthOutput> Login(
+        [Service] AuthService authService,
+        string email,
+        string password)
+    {
+        var result = await authService.LoginAsync(email, password);
+        dynamic dyn = result;
 
-        descriptor.Field("login")
-            .Description("Login with email and password, returns JWT token.")
-            .Argument("email", a => a.Type(typeof(string)))
-            .Argument("password", a => a.Type(typeof(string)))
-            .Type<AuthOutputType>()
-            .Resolve(async context =>
-            {
-                var email = context.ArgumentValue<string>("email");
-                var password = context.ArgumentValue<string>("password");
-                var authService = context.Service<AuthService>();
+        return new AuthOutput
+        {
+            Token = (string)dyn.Token,
+            User = (User)dyn.User
+        };
+    }
 
-                var result = await authService.LoginAsync(email, password);
-                dynamic dyn = result;
-                var token = (string)dyn.Token;
-                var user = (User)dyn.User;
-                return new AuthOutput { Token = token, User = user };
-            });
+    /// <summary>
+    /// Create a new order.
+    /// </summary>
+    [Authorize(Roles = new[] { "Customer" })]
+    [GraphQLName("createOrder")]
+    public async Task<Order> CreateOrder(
+        [Service] OrderService orderService,
+        [Service] IHttpContextAccessor httpContextAccessor,
+        CreateOrderInput input)
+    {
+        var customerId = GetCurrentCustomerId(httpContextAccessor, "You must be logged in to create an order");
+        var result = await orderService.CreateOrderAsync(customerId, ToModelItems(input.Items));
+        return (Order)result;
+    }
 
-        // Order mutations
-        descriptor.Field("createOrder")
-            .Description("Create a new order.")
-            .Authorize("Customer")
-            .Argument("input", a => a.Type(typeof(CreateOrderInput)))
-            .Type<OrderType>()
-            .Resolve(async context =>
-            {
-                var input = context.ArgumentValue<CreateOrderInput>("input");
-                var orderService = context.Service<OrderService>();
-                var httpContext = context.Service<IHttpContextAccessor>();
+    /// <summary>
+    /// Update an existing order (Admin only).
+    /// </summary>
+    [Authorize(Roles = new[] { "Admin" })]
+    [GraphQLName("updateOrder")]
+    public async Task<Order> UpdateOrder(
+        [Service] OrderService orderService,
+        string id,
+        UpdateOrderInput input)
+    {
+        var result = await orderService.UpdateOrderAsync(id, ToModelItems(input.Items));
+        return (Order)result;
+    }
 
-                var customerId = httpContext.HttpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(customerId))
-                    throw new UnauthorizedAccessException("You must be logged in to create an order");
+    /// <summary>
+    /// Confirm an order (Customer can only confirm own orders).
+    /// </summary>
+    [Authorize(Roles = new[] { "Customer" })]
+    [GraphQLName("confirmOrder")]
+    public async Task<Order> ConfirmOrder(
+        [Service] OrderService orderService,
+        [Service] IHttpContextAccessor httpContextAccessor,
+        string id,
+        string shippingAddress)
+    {
+        var customerId = GetCurrentCustomerId(httpContextAccessor, "You must be logged in to confirm an order");
+        var result = await orderService.ConfirmOrderAsync(id, shippingAddress, customerId);
+        return (Order)result;
+    }
 
-                var modelItems = input.Items.Select(i => new Models.OrderItemInput
+    /// <summary>
+    /// Bulk update order status (Admin only).
+    /// </summary>
+    [Authorize(Roles = new[] { "Admin" })]
+    [GraphQLName("bulkUpdateOrderStatus")]
+    public async Task<BulkUpdateResult> BulkUpdateOrderStatus(
+        [Service] OrderService orderService,
+        List<string> ids,
+        string status)
+    {
+        var result = await orderService.BulkUpdateOrderStatusAsync(ids, status);
+        dynamic dyn = result;
+
+        return new BulkUpdateResult
+        {
+            Succeeded = (int)dyn.Succeeded,
+            Failed = (int)dyn.Failed,
+            Results = ((IEnumerable<dynamic>)dyn.Results)
+                .Select(r => new ResultItem
                 {
-                    ProductId = i.ProductId,
-                    Quantity = i.Quantity
-                }).ToList();
+                    Id = (string)r.Id,
+                    OrderNumber = (string)r.OrderNumber,
+                    PreviousStatus = (string)r.PreviousStatus,
+                    NewStatus = (string)r.NewStatus,
+                    Success = (bool)(r.Success ?? false),
+                    ErrorMessage = r.ErrorMessage?.ToString()
+                })
+                .ToList()
+        };
+    }
 
-                var result = await orderService.CreateOrderAsync(customerId, modelItems);
-                return (Order)result;
-            });
+    private static string GetCurrentCustomerId(IHttpContextAccessor httpContextAccessor, string errorMessage)
+    {
+        var customerId = httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(customerId))
+            throw new UnauthorizedAccessException(errorMessage);
 
-        descriptor.Field("updateOrder")
-            .Description("Update an existing order (Admin only).")
-            .Authorize("Admin")
-            .Argument("id", a => a.Type(typeof(string)))
-            .Argument("input", a => a.Type(typeof(UpdateOrderInput)))
-            .Type<OrderType>()
-            .Resolve(async context =>
+        return customerId;
+    }
+
+    private static List<Models.OrderItemInput> ToModelItems(IEnumerable<Models.OrderItemInput> items)
+    {
+        return items
+            .Select(item => new Models.OrderItemInput
             {
-                var id = context.ArgumentValue<string>("id");
-                var input = context.ArgumentValue<UpdateOrderInput>("input");
-                var orderService = context.Service<OrderService>();
-
-                var modelItems = input.Items.Select(i => new Models.OrderItemInput
-                {
-                    ProductId = i.ProductId,
-                    Quantity = i.Quantity
-                }).ToList();
-
-                var result = await orderService.UpdateOrderAsync(id, modelItems);
-                return (Order)result;
-            });
-
-        descriptor.Field("confirmOrder")
-            .Description("Confirm an order (Customer can only confirm own orders).")
-            .Authorize("Customer")
-            .Argument("id", a => a.Type(typeof(string)))
-            .Argument("shippingAddress", a => a.Type(typeof(string)))
-            .Type<OrderType>()
-            .Resolve(async context =>
-            {
-                var id = context.ArgumentValue<string>("id");
-                var shippingAddress = context.ArgumentValue<string>("shippingAddress");
-                var orderService = context.Service<OrderService>();
-                var httpContext = context.Service<IHttpContextAccessor>();
-
-                var customerId = httpContext.HttpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(customerId))
-                    throw new UnauthorizedAccessException("You must be logged in to confirm an order");
-
-                var result = await orderService.ConfirmOrderAsync(id, shippingAddress, customerId);
-                return (Order)result;
-            });
-
-        // Admin mutations
-        descriptor.Field("bulkUpdateOrderStatus")
-            .Description("Bulk update order status (Admin only).")
-            .Authorize("Admin")
-            .Argument("ids", a => a.Type(typeof(List<string>)))
-            .Argument("status", a => a.Type(typeof(string)))
-            .Type<BulkUpdateResultType>()
-            .Resolve(async context =>
-            {
-                var ids = context.ArgumentValue<List<string>>("ids");
-                var status = context.ArgumentValue<string>("status");
-                var orderService = context.Service<OrderService>();
-
-                var result = await orderService.BulkUpdateOrderStatusAsync(ids, status);
-                dynamic dyn = result;
-
-                return new BulkUpdateResult
-                {
-                    Succeeded = (int)dyn.Succeeded,
-                    Failed = (int)dyn.Failed,
-                    Results = ((IEnumerable<dynamic>)dyn.Results)
-                        .Select(r => new ResultItem
-                        {
-                            Id = (string)r.Id,
-                            OrderNumber = (string)r.OrderNumber,
-                            PreviousStatus = (string)r.PreviousStatus,
-                            NewStatus = (string)r.NewStatus,
-                            Success = (bool)(r.Success ?? false),
-                            ErrorMessage = r.ErrorMessage?.ToString()
-                        })
-                        .ToList()
-                };
-            });
+                ProductId = item.ProductId,
+                Quantity = item.Quantity
+            })
+            .ToList();
     }
 }
