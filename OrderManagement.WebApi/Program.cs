@@ -1,7 +1,9 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using OrderManagement.WebApi.GraphTypes.Inputs;
+using OrderManagement.WebApi.GraphTypes.Mutations;
+using OrderManagement.WebApi.GraphTypes.Outputs;
+using OrderManagement.WebApi.GraphTypes.Queries;
 using OrderManagement.WebApi.Models;
-using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,6 +32,18 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<OrderService>();
 
+builder.Services.AddGraphQLServer()
+    .ConfigureSchema(schema => schema.AddAuthorizeDirectiveType())
+    .AddType<QueryType>()
+    .AddType<MutationType>()
+    .AddType<UserType>()
+    .AddType<OrderType>()
+    .AddType<OrderSummaryType>()
+    .AddType<OrderStatusType>()
+    .AddType<AuthOutputType>()
+    .AddType<BulkUpdateResultType>()
+    .AddType<ResultItemType>();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -39,104 +53,7 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapPost("/api/auth/register", async (AuthService auth, HttpContext context) =>
-{
-    var input = await context.Request.ReadFromJsonAsync<CreateUserRequest>();
-    try
-    {
-        var user = await auth.CreateUserAsync(input.Email, input.FirstName, input.LastName, input.Phone, input.Password, input.ConfirmPassword);
-        return Results.Ok(user);
-    }
-    catch (Exception)
-    {
-        return Results.BadRequest(new { error = "Invalid request" });
-    }
-});
-
-app.MapPost("/api/auth/login", async (AuthService auth, HttpContext context) =>
-{
-    var input = await context.Request.ReadFromJsonAsync<LoginRequest>();
-    try
-    {
-        return Results.Ok(await auth.LoginAsync(input.Email, input.Password));
-    }
-    catch
-    {
-        return Results.Unauthorized();
-    }
-});
-
-app.MapPost("/api/orders", async (OrderService order, HttpContext context) =>
-{
-    var input = await context.Request.ReadFromJsonAsync<CreateOrderRequest>();
-    var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-    try
-    {
-        var items = input.Items.Select(i => new OrderItemInput { ProductId = i.ProductId, Quantity = i.Quantity }).ToList();
-        return Results.Ok(await order.CreateOrderAsync(userId, items));
-    }
-    catch (Exception)
-    {
-        return Results.BadRequest(new { error = "Invalid request" });
-    }
-});
-
-app.MapPut("/api/orders/{orderId}", async (OrderService order, string orderId, HttpContext context) =>
-{
-    var input = await context.Request.ReadFromJsonAsync<OrderItemsRequest>();
-    try
-    {
-        var items = input.Items.Select(i => new OrderItemInput { ProductId = i.ProductId, Quantity = i.Quantity }).ToList();
-        return Results.Ok(await order.UpdateOrderAsync(orderId, items));
-    }
-    catch (Exception)
-    {
-        return Results.BadRequest(new { error = "Invalid request" });
-    }
-});
-
-app.MapPost("/api/orders/{orderId}/confirm", async (OrderService order, string orderId, HttpContext context) =>
-{
-    var input = await context.Request.ReadFromJsonAsync<ConfirmOrderRequest>();
-    var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-    try
-    {
-        return Results.Ok(await order.ConfirmOrderAsync(orderId, input.ShippingAddress, userId));
-    }
-    catch (Exception)
-    {
-        return Results.BadRequest(new { error = "Invalid request" });
-    }
-});
-
-app.MapGet("/api/orders", async (OrderService order, [FromQuery] string orderNumber, [FromQuery] string customerName, [FromQuery] string status, [FromQuery] int page = 1, [FromQuery] int pageSize = 20) =>
-{
-    try
-    {
-        return Results.Ok(await order.SearchOrdersAsync(
-            string.IsNullOrEmpty(orderNumber) ? null : orderNumber,
-            string.IsNullOrEmpty(customerName) ? null : customerName,
-            string.IsNullOrEmpty(status) ? null : status,
-            page, pageSize));
-    }
-    catch (Exception)
-    {
-        return Results.BadRequest(new { error = "Invalid request" });
-    }
-});
-
-app.MapPost("/api/admin/bulk-update", async (OrderService order, HttpContext context) =>
-{
-    var input = await context.Request.ReadFromJsonAsync<BulkUpdateRequest>();
-    try
-    {
-        return Results.Ok(await order.BulkUpdateOrderStatusAsync(input.Ids.ToList(), input.Status));
-    }
-    catch (Exception)
-    {
-        return Results.BadRequest(new { error = "Invalid request" });
-    }
-});
+app.MapGraphQL();
 
 using (var scope = app.Services.CreateScope())
 {
@@ -145,10 +62,3 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
-
-public record CreateUserRequest(string Email, string FirstName, string LastName, string Phone, string Password, string ConfirmPassword);
-public record LoginRequest(string Email, string Password);
-public record CreateOrderRequest(OrderItemInput[] Items);
-public record ConfirmOrderRequest(string ShippingAddress);
-public record BulkUpdateRequest(string[] Ids, string Status);
-public record OrderItemsRequest(OrderItemInput[] Items);
