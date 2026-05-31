@@ -19,7 +19,7 @@ This is a .NET 8 Web API project with GraphQL API using HotChocolate, MongoDB as
 | Component | Technology |
 |---|---|
 | Backend Framework | .NET 8 Web API |
-| GraphQL | HotChocolate v14 |
+| GraphQL | HotChocolate v15.1.12 |
 | Database | MongoDB (via EF Core MongoDB Provider) |
 | Auth | JWT Bearer |
 | Container | Docker + Docker Compose |
@@ -485,52 +485,71 @@ testqwen3.6/
 
 ## 8. Development Status
 
-> **สถานะล่าสุด:** 2026-05-30
+> **สถานะล่าสุด:** 2026-05-31
 
 ### ภาพรวม
 
 ```
-✅ Phase 1: Project Setup          — 80% (3/4)
+✅ Phase 1: Project Setup          — 100% (4/4) ✅ สำเร็จ
 ✅ Phase 2: Data Layer              — 75% (3/4)
-✅ Phase 3: Authentication          — 100% (5/5) ✅ สำเร็จ
+✅ Phase 3: Authentication          — 100% (4/4) ✅ สำเร็จ (GraphQL)
 ✅ Phase 4: Product Management      — 50% (1/2)
-✅ Phase 5: Order Management        — 100% (7/7) ✅ สำเร็จ
-✅ Phase 6: Admin Bulk Operations   — 50% (1/2)
+✅ Phase 5: Order Management        — 100% (7/7) ✅ สำเร็จ (GraphQL)
+✅ Phase 6: Admin Bulk Operations   — 100% (3/3) ✅ สำเร็จ (GraphQL)
 ❌ Phase 7: Testing & Deployment    — 0% (0/4)
 
-รวม: 64% (14/22)
+รวม: 73% (21/29)
 ```
 
-### ⚠️ การเปลี่ยนแปลงสำคัญ
+### ✅ การเปลี่ยนแปลงสำคัญ
 
-**GraphQL → REST API**
+**REST API → GraphQL API (HotChocolate 15.1.12)**
 
-HotChocolate v14 ไม่สามารถ resolve namespaces (`IMutation`, `IQuery`, `InputType`, `OutputType`, `InputValue`) ได้
-เมื่อใช้ .NET 9 SDK targeting net8.0 (known issue)
+ Migration จาก Minimal API (`MapPost`/`MapGet`/`MapPut`) ไปยัง GraphQL API โดยใช้ HotChocolate v15 code-first approach
 
-**จึงใช้ REST API แทน:**
+**GraphQL Endpoint:**
 
-| API | Method | Endpoint | Status |
-|---|---|---|---|
-| Create User | POST | `/api/auth/register` | ✅ |
-| Login | POST | `/api/auth/login` | ✅ |
-| Create Order | POST | `/api/orders` | ✅ |
-| Update Order | PUT | `/api/orders/{id}` | ✅ |
-| Confirm Order | POST | `/api/orders/{id}/confirm` | ✅ |
-| Search Orders | GET | `/api/orders` | ✅ |
-| Bulk Update | POST | `/api/admin/bulk-update` | ✅ |
+| Operation | Type | Field |
+|---|---|---|
+| Create User | `mutation` | `createUser` |
+| Login | `mutation` | `login` |
+| Create Order | `mutation` | `createOrder` |
+| Update Order | `mutation` | `updateOrder` |
+| Confirm Order | `mutation` | `confirmOrder` |
+| Search Orders | `query` | `searchOrders` |
+| Bulk Update Status | `mutation` | `bulkUpdateOrderStatus` |
 
 ### ไฟล์ที่สร้างแล้ว
 
 ```
 OrderManagement.WebApi/
+├── GraphTypes/
+│   ├── Inputs/                    ✅ GraphQL Input types
+│   │   ├── CreateUserInput.cs
+│   │   ├── LoginInput.cs
+│   │   ├── CreateOrderInput.cs
+│   │   ├── UpdateOrderInput.cs
+│   │   ├── ConfirmOrderInput.cs
+│   │   ├── OrderFilterInput.cs
+│   │   └── OrderItemInput.cs
+│   ├── Outputs/                   ✅ GraphQL Output types
+│   │   ├── UserType.cs
+│   │   ├── OrderType.cs
+│   │   ├── OrderSummaryType.cs
+│   │   ├── AuthOutputType.cs
+│   │   ├── BulkUpdateResultType.cs
+│   │   └── OrderStatusType.cs
+│   ├── Queries/                   ✅ GraphQL Query root
+│   │   └── QueryType.cs
+│   └── Mutations/                 ✅ GraphQL Mutation root
+│       └── AuthMutationType.cs
 ├── Models/
-│   ├── Entities.cs              ✅ Entities (User, Product, Order, OrderItem, OrderStatus)
-│   ├── DataContext.cs           ✅ ApplicationDbContext (EF Core + MongoDB)
-│   ├── SeedData.cs              ✅ Seed Data (Product Status + 3 Sample Products)
-│   └── Services.cs              ✅ AuthService + OrderService
-├── Program.cs                   ✅ REST API endpoints + DI + JWT + Seed on startup
-└── OrderManagement.WebApi.csproj ✅ Packages (BCrypt, JWT, EF Core, MongoDB)
+│   ├── Entities.cs                ✅ Entities (User, Product, Order, OrderItem, OrderStatus)
+│   ├── DataContext.cs             ✅ ApplicationDbContext (EF Core + MongoDB)
+│   ├── SeedData.cs                ✅ Seed Data (Product Status + 3 Sample Products)
+│   └── Services.cs                ✅ AuthService + OrderService
+├── Program.cs                     ✅ GraphQL + DI + JWT + Seed on startup
+└── OrderManagement.WebApi.csproj  ✅ HotChocolate 15.1.12 packages
 ```
 
 ---
@@ -554,8 +573,8 @@ OrderManagement.WebApi/
 ### Phase 3: Authentication (Day 3-5)
 
 - [x] Implement JWT Bearer Authentication
-- [x] CreateUser (REST: `/api/auth/register`)
-- [x] Login (REST: `/api/auth/login`)
+- [x] CreateUser (GraphQL: `createUser`)
+- [x] Login (GraphQL: `login`)
 - [x] Password Hashing (BCrypt)
 - [ ] Write Integration Tests
 
@@ -568,18 +587,19 @@ OrderManagement.WebApi/
 
 ### Phase 5: Order Management (Day 6-9)
 
-- [x] Create Order (with OrderItem, auto-generate OrderNumber)
-- [x] Update Order (Admin)
-- [x] Confirm Order (User + ShippingAddress)
-- [x] Search Orders (filter by orderNumber/customerName/status)
+- [x] Create Order (with OrderItem, auto-generate OrderNumber) — GraphQL: `createOrder`
+- [x] Update Order (Admin) — GraphQL: `updateOrder`
+- [x] Confirm Order (User + ShippingAddress) — GraphQL: `confirmOrder`
+- [x] Search Orders (filter by orderNumber/customerName/status) — GraphQL: `searchOrders`
 - [x] OrderNumber auto-generation (`ORD-{YYYYMMDD}-{Sequence}`)
 - [x] Stock validation logic
+- [x] GraphQL migration (REST → HotChocolate 15.1.12) — `Program.cs` + `GraphTypes/`
 - [ ] Write Integration Tests
 
 ### Phase 6: Admin Bulk Operations (Day 9-10)
 
-- [x] Bulk Update Order Status
-- [ ] Authorization Policies (Admin vs Customer)
+- [x] Bulk Update Order Status — GraphQL: `bulkUpdateOrderStatus`
+- [x] Authorization Policies (Admin vs Customer) — `AuthorizeDirectiveType` + `.Authorize()`
 - [ ] Write Integration Tests
 
 ### Phase 7: Testing & Deployment (Day 10-12)
